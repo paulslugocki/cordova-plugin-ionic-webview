@@ -23,10 +23,31 @@
     NSURL * url = urlSchemeTask.request.URL;
     NSString * stringToLoad = url.path;
     NSString * scheme = url.scheme;
+    NSString * method = urlSchemeTask.request.HTTPMethod;
+    NSData * data;
+    NSInteger statusCode;
 
     if ([scheme isEqualToString:self.scheme]) {
         if ([stringToLoad hasPrefix:@"/_app_file_"]) {
             startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_app_file_" withString:@""];
+        } else if ([stringToLoad hasPrefix:@"/_http_proxy_"]||[stringToLoad hasPrefix:@"/_https_proxy_"]) {
+            startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_http_proxy_" withString:@"http://"];
+            startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_https_proxy_" withString:@"https://"];
+            NSLog(@"Proxy %@", startPath);
+            NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+            [request setHTTPMethod:method];
+            [request setURL:[NSURL URLWithString:startPath]];
+            [request setAllHTTPHeaderFields:[NSHTTPCookie requestHeaderFieldsWithCookies:[NSHTTPCookieStorage sharedHTTPCookieStorage].cookies]];
+            [request HTTPShouldHandleCookies];
+
+            NSError *error = nil;
+            NSHTTPURLResponse *responseCode = nil;
+
+            data = [NSURLConnection sendSynchronousRequest:request returningResponse:&responseCode error:&error];
+            statusCode = [responseCode statusCode];
+            if (!error) {
+                NSLog(@"%@", error);
+            }
         } else {
             startPath = self.basePath;
             if ([stringToLoad isEqualToString:@""] || [url.pathExtension isEqualToString:@""]) {
@@ -37,8 +58,10 @@
         }
     }
 
-    NSData * data = [[NSData alloc] initWithContentsOfFile:startPath];
-    NSInteger statusCode = 200;
+    if(!data) {
+        data = [[NSData alloc] initWithContentsOfFile:startPath];
+    }
+    statusCode = 200;
     if (!data) {
         statusCode = 404;
     }
