@@ -23,7 +23,12 @@
     NSString * startPath = @"";
     NSURL * url = urlSchemeTask.request.URL;
     NSDictionary * header = urlSchemeTask.request.allHTTPHeaderFields;
-    NSString * stringToLoad = url.path;
+    NSMutableString * stringToLoad = [NSMutableString string];
+    [stringToLoad appendString:url.path];
+    if(url.query) {
+        [stringToLoad appendString:@"?"];
+        [stringToLoad appendString:url.query];
+    }
     NSString * scheme = url.scheme;
     NSString * method = urlSchemeTask.request.HTTPMethod;
     NSData * body = urlSchemeTask.request.HTTPBody;
@@ -45,8 +50,8 @@
                 [request setHTTPBody:body];
             }
             [request setAllHTTPHeaderFields:header];
-            [request setAllHTTPHeaderFields:[NSHTTPCookie requestHeaderFieldsWithCookies:[NSHTTPCookieStorage sharedHTTPCookieStorage].cookies]];
-            //[request setHTTPShouldHandleCookies:YES];
+            //[request setAllHTTPHeaderFields:[NSHTTPCookie requestHeaderFieldsWithCookies:[NSHTTPCookieStorage sharedHTTPCookieStorage].cookies]];
+            [request setHTTPShouldHandleCookies:YES];
             
             [[[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                 if(error) {
