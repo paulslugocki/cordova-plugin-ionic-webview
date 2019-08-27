@@ -25,10 +25,6 @@
     NSDictionary * header = urlSchemeTask.request.allHTTPHeaderFields;
     NSMutableString * stringToLoad = [NSMutableString string];
     [stringToLoad appendString:url.path];
-    if(url.query) {
-        [stringToLoad appendString:@"?"];
-        [stringToLoad appendString:url.query];
-    }
     NSString * scheme = url.scheme;
     NSString * method = urlSchemeTask.request.HTTPMethod;
     NSData * body = urlSchemeTask.request.HTTPBody;
@@ -39,13 +35,18 @@
         if ([stringToLoad hasPrefix:@"/_app_file_"]) {
             startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_app_file_" withString:@""];
         } else if ([stringToLoad hasPrefix:@"/_http_proxy_"]||[stringToLoad hasPrefix:@"/_https_proxy_"]) {
+            if(url.query) {
+                [stringToLoad appendString:@"?"];
+                [stringToLoad appendString:url.query];
+            }
             loadFile = false;
             startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_http_proxy_" withString:@"http://"];
             //startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_https_proxy_" withString:@"https://"];
             NSLog(@"Proxy %@", startPath);
+            NSURL * requestUrl = [NSURL URLWithString:startPath];
             NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
             [request setHTTPMethod:method];
-            [request setURL:[NSURL URLWithString:startPath]];
+            [request setURL:requestUrl];
             if (body) {
                 [request setHTTPBody:body];
             }
@@ -57,7 +58,7 @@
                 if(error) {
                     NSLog(@"Proxy error: %@", error);
                 }
-                
+
                 [urlSchemeTask didReceiveResponse:response];
                 [urlSchemeTask didReceiveData:data];
                 [urlSchemeTask didFinish];
