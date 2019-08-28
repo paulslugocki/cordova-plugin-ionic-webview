@@ -42,8 +42,9 @@
             loadFile = false;
             startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_http_proxy_" withString:@"http://"];
             //startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_https_proxy_" withString:@"https://"];
-            NSLog(@"Proxy %@", startPath);
             NSURL * requestUrl = [NSURL URLWithString:startPath];
+            WKWebsiteDataStore* dataStore = [WKWebsiteDataStore defaultDataStore];
+            WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
             NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
             [request setHTTPMethod:method];
             [request setURL:requestUrl];
@@ -51,13 +52,29 @@
                 [request setHTTPBody:body];
             }
             [request setAllHTTPHeaderFields:header];
-            //[request setAllHTTPHeaderFields:[NSHTTPCookie requestHeaderFieldsWithCookies:[NSHTTPCookieStorage sharedHTTPCookieStorage].cookies]];
             [request setHTTPShouldHandleCookies:YES];
             
             [[[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                 if(error) {
                     NSLog(@"Proxy error: %@", error);
                 }
+                
+                // set cookies to WKWebView
+                NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)response;
+                NSArray* cookies = [NSHTTPCookie cookiesWithResponseHeaderFields:[httpResponse allHeaderFields] forURL:response.URL];
+                [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookies:cookies forURL:httpResponse.URL mainDocumentURL:nil];
+               cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookies];
+                
+                for (NSHTTPCookie* c in cookies)
+                {
+                    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+                        //running in background thread is necessary because setCookie otherwise fails
+                        dispatch_async(dispatch_get_main_queue(), ^(void){
+                            NSLog(@"sync cookie: %@", c.name);
+                            [cookieStore setCookie:c completionHandler:nil];
+                        });
+                    });
+                };
 
                 [urlSchemeTask didReceiveResponse:response];
                 [urlSchemeTask didReceiveData:data];
