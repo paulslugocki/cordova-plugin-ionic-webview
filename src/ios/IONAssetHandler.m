@@ -41,7 +41,7 @@
             }
             loadFile = false;
             startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_http_proxy_" withString:@"http://"];
-            //startPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/_https_proxy_" withString:@"https://"];
+            startPath = [startPath stringByReplacingOccurrencesOfString:@"/_https_proxy_" withString:@"https://"];
             NSURL * requestUrl = [NSURL URLWithString:startPath];
             WKWebsiteDataStore* dataStore = [WKWebsiteDataStore defaultDataStore];
             WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
@@ -63,14 +63,13 @@
                 NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)response;
                 NSArray* cookies = [NSHTTPCookie cookiesWithResponseHeaderFields:[httpResponse allHeaderFields] forURL:response.URL];
                 [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookies:cookies forURL:httpResponse.URL mainDocumentURL:nil];
-               cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookies];
+                cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookies];
                 
                 for (NSHTTPCookie* c in cookies)
                 {
                     dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
                         //running in background thread is necessary because setCookie otherwise fails
                         dispatch_async(dispatch_get_main_queue(), ^(void){
-                            NSLog(@"sync cookie: %@", c.name);
                             [cookieStore setCookie:c completionHandler:nil];
                         });
                     });
